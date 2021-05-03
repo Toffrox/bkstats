@@ -2,7 +2,7 @@ import requests
 import json
 from settings import *
 
-def getNationActivity (nationID):
+def getNation (nationID):
 
     nationLink = pnw + "nation/id=" + str(nationID) + "/" + key
     nationResponse = requests.get(nationLink)
@@ -11,12 +11,7 @@ def getNationActivity (nationID):
     
     try:
         nation = json.loads(nationData, strict=False)
-        if (nation["success"]):
-            minutes = nation["minutessinceactive"]
-            return minutes
-        else:
-            print(nation["error"])
-            return -1
+        return nation;
     except ValueError:
         print ("Decoding JSON Failed")
     except AttributeError:
