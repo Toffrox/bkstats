@@ -6,7 +6,7 @@ import asyncio
 
 from settings import *
 from getNation import getNation
-#from getDiscord import getDiscord
+from getDiscord import getDiscord
 from getIDsheet import getSpreadsheet
 from datetime import datetime
 
@@ -28,7 +28,7 @@ async def fetchMembers():
             alliance = json.loads(data, strict=False)
             if (alliance["success"]):
                 members = alliance["member_id_list"]
-                #ids = getSpreadsheet()
+                ids = getSpreadsheet()
 
                 for i in members:
                     memberLog = {'P&W Active':[], 'Discord Messages':[]}
@@ -42,14 +42,14 @@ async def fetchMembers():
 
                         #append pnw activity to individual member dataframe
                         memberLog['P&W Active'].append(nation["minutessinceactive"])
-
-                        #get discord id from nation id, then count messages
-                        #messageCount = await getDiscord(ids.loc[i])
-
-                        #append discord activity to individual member dataframe
-                        #memberLog['Discord Messages'].append(messageCount)
                         
-                        memberLog['Discord Messages'].append(0)
+                        try:
+                            #get discord id from nation id, then count messages
+                            messageCount = await getDiscord(ids.loc[i].DiscordID)
+                            #append discord activity to individual member dataframe
+                            memberLog['Discord Messages'].append(messageCount)
+                        except KeyError:
+                            memberLog['Discord Messages'].append(0)
 
                         #create individual member dataframe
                         memberDF = pd.DataFrame(memberLog, index = [currentTime])
