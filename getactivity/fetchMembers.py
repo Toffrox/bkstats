@@ -5,6 +5,7 @@ import os.path
 
 from settings import *
 from getNation import getNation
+from getDiscord import getDiscord
 from datetime import datetime
 
 now = datetime.now()
@@ -48,7 +49,7 @@ try:
 
     else:
         print(alliance["error"])
-#except ValueError:
-    #print ("Decoding JSON Failed")
+except ValueError:
+    print ("Decoding JSON Failed")
 except AttributeError:
     print ("Parsing Failed")
