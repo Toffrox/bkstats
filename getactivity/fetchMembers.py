@@ -74,7 +74,7 @@ async def fetchMembers():
         except AttributeError:
             print ("Parsing Failed")
 
-        await asyncio.sleep(120)
+        await asyncio.sleep(7200)
 
 #event loop
 loop = asyncio.get_event_loop()
