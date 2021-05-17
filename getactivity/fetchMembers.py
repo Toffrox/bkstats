@@ -19,7 +19,8 @@ async def fetchMembers():
     while True:
         now = datetime.now()
         currentTime = now.strftime("%d-%m-%Y %H:%M:%S")
-
+        print(currentTime + ": Running...")
+        
         memberList = {'DiscordID':[], 'Date Founded':[]}
 
         data = await get_alliance_json()
