@@ -1,2 +1,4 @@
 bk-members.json
-/getactivity/settings.py
+getactivity/settings.py
+*.csv
+
