@@ -9,7 +9,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_name('./bk-members.json', sc
 client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
-sheet = client.open("Copy of All the BK Members").worksheet('discordid')
+sheet = client.open("All the BK Members").worksheet('discordid')
 
 def getSpreadsheet():
     df = pd.DataFrame(sheet.get_all_records())

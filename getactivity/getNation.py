@@ -2,6 +2,7 @@ import requests
 import json
 from settings import *
 
+# get nation JSON by nation ID
 def getNation (nationID):
 
     nationLink = pnw + "nation/id=" + str(nationID) + "/" + key
@@ -16,5 +17,3 @@ def getNation (nationID):
         print ("Decoding JSON Failed")
     except AttributeError:
         print ("Parsing Failed")
-
-    
