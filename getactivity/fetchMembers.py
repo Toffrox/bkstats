@@ -41,7 +41,12 @@ def fetchMembers(m):
 
                 #append pnw activity to individual member dataframe
                 #print("Minutes since last P&W login: " + str(nation["minutessinceactive"]))
-                memberLog['P&W Active'].append(nation["minutessinceactive"])
+
+                # if minutes since last active is less than 60, this means user has logged in within the last hour/after the last check
+                if nation["minutessinceactive"] < 60:
+                    memberLog['P&W Active'].append(True)
+                else:
+                    memberLog['P&W Active'].append(False)
                 
                 print("Getting Discord info...")
                 try:
