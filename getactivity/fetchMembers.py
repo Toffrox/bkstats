@@ -2,88 +2,87 @@ import requests
 import json
 import pandas as pd
 import os.path
-import asyncio
 
 from settings import *
 from getNation import getNation
-from getDiscord import getDiscord
 from getIDsheet import getSpreadsheet
 from datetime import datetime
 
-async def get_alliance_json():
+def get_alliance_json():
     alliance = pnw + "alliance/id=877/" + key
     response = requests.get(alliance)
     return response.text
 
-async def fetchMembers():
-    while True:
-        now = datetime.now()
-        currentTime = now.strftime("%d-%m-%Y %H:%M:%S")
-        print(currentTime + ": Running...")
-        
-        memberList = {'DiscordID':[], 'Date Founded':[]}
+def fetchMembers(m):
+    now = datetime.now()
+    currentTime = now.strftime("%d-%m-%Y %H:%M:%S")
+    print(currentTime + ": Running fetch...")
+    
+    memberList = {'DiscordID':[], 'Date Founded':[]}
 
-        data = await get_alliance_json()
+    data = get_alliance_json()
 
-        try:
-            alliance = json.loads(data, strict=False)
-            if (alliance["success"]):
-                members = alliance["member_id_list"]
-                ids = getSpreadsheet()
+    alliance = json.loads(data, strict=False)
+    if (alliance["success"]):
+        members = alliance["member_id_list"]
 
-                for i in members:
-                    memberLog = {'P&W Active':[], 'Discord Messages':[]}
+        # get a dataframe of all discord IDs by nation ID
+        ids = getSpreadsheet()
 
-                    nation = getNation(i)
+        for i in members:
+            memberLog = {'P&W Active':[], 'Discord Messages':[]}
+            print("Getting nation info for " + str(i))
+            nation = getNation(i)
 
-                    if (nation["success"]):
-                        #append to the all members list
-                        memberList['DiscordID'].append(0)
-                        memberList['Date Founded'].append(nation["founded"])
+            if (nation["success"]):
+                #append age to the all members list
+                #print("Date founded: " + str(nation["founded"]))
+                memberList['Date Founded'].append(nation["founded"])
 
-                        #append pnw activity to individual member dataframe
-                        memberLog['P&W Active'].append(nation["minutessinceactive"])
-                        
-                        try:
-                            #get discord id from nation id, then count messages
-                            messageCount = await getDiscord(ids.loc[i].DiscordID)
-                            #append discord activity to individual member dataframe
-                            memberLog['Discord Messages'].append(messageCount)
-                        except KeyError:
-                            memberLog['Discord Messages'].append(0)
+                #append pnw activity to individual member dataframe
+                #print("Minutes since last P&W login: " + str(nation["minutessinceactive"]))
 
-                        #create individual member dataframe
-                        memberDF = pd.DataFrame(memberLog, index = [currentTime])
+                # if minutes since last active is less than 60, this means user has logged in within the last hour/after the last check
+                if nation["minutessinceactive"] < 60:
+                    memberLog['P&W Active'].append(True)
+                else:
+                    memberLog['P&W Active'].append(False)
+                
+                print("Getting Discord info...")
+                try:
+                    #append discord ID to all members list
+                    did = ids.loc[i].DiscordID
+                    #print("Discord ID: " + str(did))
+                    memberList['DiscordID'].append(did)
 
-                        #if individual member activity csv exists, then append, if not, create
-                        memberFile = os.path.abspath('./memberactivity/' + str(i) + '.csv')
-                        if (os.path.isfile(memberFile)):
-                            memberDF.to_csv(memberFile, header=False, mode='a')
-                        else:
-                            memberDF.to_csv(memberFile, header=['P&W Active', 'Discord Messages'])
-                    else:
-                        print(nation["error"])
+                    #get discord id from nation id, then count messages
+                    messageCount = m.getCount(did)
+                    #print("Messages in Discord in the last 2 hours: " + str(messageCount))
+                    #append discord activity to individual member dataframe
+                    memberLog['Discord Messages'].append(messageCount)
+                except KeyError:
+                    print("No ID found")
+                    memberList['DiscordID'].append(0)
+                    memberLog['Discord Messages'].append(0)
 
-                #create dataframe for list of all members
-                membersDF = pd.DataFrame(memberList, members)
-                membersDF.to_csv(os.path.abspath('./members.csv'), header=['DiscordID', 'Date Founded'])
+                #create individual member dataframe
+                memberDF = pd.DataFrame(memberLog, index = [currentTime])
 
+                #if individual member activity csv exists, then append, if not, create
+                print("Writing activity log to csv for member " + str(i))
+                memberFile = os.path.abspath('./memberactivity/' + str(i) + '.csv')
+                if (os.path.isfile(memberFile)):
+                    memberDF.to_csv(memberFile, header=False, mode='a')
+                else:
+                    memberDF.to_csv(memberFile, header=['P&W Active', 'Discord Messages'])
             else:
-                print(alliance["error"])
-        except ValueError:
-            print ("Decoding JSON Failed")
-        except AttributeError:
-            print ("Parsing Failed")
+                print(nation["error"])
 
-        await asyncio.sleep(7200)
+        #create dataframe for list of all members
+        print("Creating new member list...")
+        membersDF = pd.DataFrame(memberList, members)
+        membersDF.to_csv(os.path.abspath('./memberslist/' + now.strftime("%d-%m-%Y %H%M") + '.csv'), header=['DiscordID', 'Date Founded'])
+        print("Done")
 
-#event loop
-loop = asyncio.get_event_loop()
-try:
-    asyncio.ensure_future(fetchMembers())
-    loop.run_forever()
-except KeyboardInterrupt:
-    pass
-finally:
-    print("Closing Loop")
-    loop.close()
+    else:
+        print(alliance["error"])
