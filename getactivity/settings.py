@@ -1,6 +1,8 @@
+import os
+
 global key
-key = "PNWKEYHERE"
+key = os.environ['key']
 global pnw
 pnw = "https://politicsandwar.com/api/"
 global disckey
-disckey = "DISCORDKEYHERE"
+disckey = os.environ['disckey']
