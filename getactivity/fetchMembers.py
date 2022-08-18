@@ -2,32 +2,31 @@ import requests
 import json
 import pandas as pd
 import os.path
-import asyncio
 
 from settings import *
 from getNation import getNation
-from getDiscord import getDiscord
 from getIDsheet import getSpreadsheet
 from datetime import datetime
 
-async def get_alliance_json():
+def get_alliance_json():
     alliance = pnw + "alliance/id=877/" + key
     response = requests.get(alliance)
     return response.text
 
-async def fetchMembers():
-    
+def fetchMembers(m):
     now = datetime.now()
     currentTime = now.strftime("%d-%m-%Y %H:%M:%S")
-    print(currentTime + ": Running...")
+    print(currentTime + ": Running fetch...")
     
     memberList = {'DiscordID':[], 'Date Founded':[]}
 
-    data = await get_alliance_json()
+    data = get_alliance_json()
 
     alliance = json.loads(data, strict=False)
     if (alliance["success"]):
         members = alliance["member_id_list"]
+
+        # get a dataframe of all discord IDs by nation ID
         ids = getSpreadsheet()
 
         for i in members:
@@ -37,33 +36,35 @@ async def fetchMembers():
 
             if (nation["success"]):
                 #append age to the all members list
-                print("Date founded: " + str(nation["founded"]))
+                #print("Date founded: " + str(nation["founded"]))
                 memberList['Date Founded'].append(nation["founded"])
 
                 #append pnw activity to individual member dataframe
-                print("Minutes since last P&W login: " + str(nation["minutessinceactive"]))
+                #print("Minutes since last P&W login: " + str(nation["minutessinceactive"]))
                 memberLog['P&W Active'].append(nation["minutessinceactive"])
                 
                 print("Getting Discord info...")
                 try:
                     #append discord ID to all members list
-                    print("Discord ID: " + str(ids.loc[i].DiscordID))
-                    memberList['DiscordID'].append(ids.loc[i].DiscordID)
+                    did = ids.loc[i].DiscordID
+                    #print("Discord ID: " + str(did))
+                    memberList['DiscordID'].append(did)
 
                     #get discord id from nation id, then count messages
-                    messageCount = await getDiscord(ids.loc[i].DiscordID)
-                    print("Messages in Discord in the last 2 hours: " + str(messageCount))
+                    messageCount = m.getCount(did)
+                    #print("Messages in Discord in the last 2 hours: " + str(messageCount))
                     #append discord activity to individual member dataframe
                     memberLog['Discord Messages'].append(messageCount)
                 except KeyError:
                     print("No ID found")
                     memberList['DiscordID'].append(0)
-                memberLog['Discord Messages'].append(0)
+                    memberLog['Discord Messages'].append(0)
 
                 #create individual member dataframe
                 memberDF = pd.DataFrame(memberLog, index = [currentTime])
 
                 #if individual member activity csv exists, then append, if not, create
+                print("Writing activity log to csv for member " + str(i))
                 memberFile = os.path.abspath('./memberactivity/' + str(i) + '.csv')
                 if (os.path.isfile(memberFile)):
                     memberDF.to_csv(memberFile, header=False, mode='a')
@@ -73,21 +74,10 @@ async def fetchMembers():
                 print(nation["error"])
 
         #create dataframe for list of all members
+        print("Creating new member list...")
         membersDF = pd.DataFrame(memberList, members)
-        membersDF.to_csv(os.path.abspath('./members.csv'), header=['DiscordID', 'Date Founded'])
+        membersDF.to_csv(os.path.abspath('./memberslist/' + now.strftime("%d-%m-%Y %H%M") + '.csv'), header=['DiscordID', 'Date Founded'])
+        print("Done")
 
     else:
         print(alliance["error"])
-
-
-#event loop
-loop = asyncio.get_event_loop()
-try:
-    asyncio.ensure_future(fetchMembers())
-    loop.run_forever()
-    loop.run_until_complete(fetchMembers())
-except KeyboardInterrupt:
-    pass
-finally:
-    print("Closing Loop")
-    loop.close()
